@@ -8,7 +8,7 @@ const config = createConfig(
   getDefaultConfig({
     // Required API Keys
     alchemyId: "",
-    walletConnectProjectId: "036041c36e801bbca9ae2649ff644509",
+    walletConnectProjectId: "036041c36e801bbca9ae2649ff644509", //video said it should be ok to push api key
 
     // Required
     appName: "Your App Name",
