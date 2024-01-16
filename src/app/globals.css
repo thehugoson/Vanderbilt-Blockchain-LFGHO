@@ -2,26 +2,87 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+
+.lottery-home {
+  background-color: #1a3319;
+  color: #a07b58;
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center; 
+
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+.lottery-page {
+  background-color: #1a3319;
+  color: #a07b58;
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center; 
+
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+.lottery-home h1 {
+  font-size: 4em;
+  font-weight: bold;
+
+}
+
+.connect-button{
+  margin-top: 10px;
+  padding: 10px 15px;
+  cursor: pointer;
+  background-color: #452304;
+  color: #a07b58;
+  border: none;
+  border-radius: 10px;
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.connect-button:hover {
+  background-color: #1b0f04;
+}
+
+.action-button {
+  margin-top: 10px;
+  padding: 10px 15px;
+  cursor: pointer;
+  background-color: #452304;
+  color: #a07b58;
+  border: none;
+  border-radius: 5px;
+}
+
+.action-button:hover {
+  background-color: #1b0f04; 
+}
+
+.number-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+
+.lottery-game {
+  flex: 1;
+}
+
+.wallet-info {
+  margin-top: 20px;
+}
+
+.loading {
+  font-size: 18px;
+  color: #ccc;
 }
