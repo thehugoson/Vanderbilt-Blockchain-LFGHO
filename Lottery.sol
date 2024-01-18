@@ -1,10 +1,11 @@
-// Check comments above functions. Some might need to be modified for robsutness/optimal functioanlity. 
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 contract PowerballLottery {
     address public owner;
+    IERC20 public ghoToken; // GHO token contract
     uint256 public totalStaked;
     uint256 public currentWeek;
     uint256 public drawTime;
@@ -37,18 +38,14 @@ contract PowerballLottery {
         _;
     }
 
-    constructor() {
+    constructor(address _ghoToken) {
         owner = msg.sender;
+        ghoToken = IERC20(_ghoToken);
         drawTime = block.timestamp + oneWeek;
     }
 
-    // Current functionality requires users to stake 2 ETH. Only allowed to have one entry per week.
-    // The ammount and both frequency, are unrealistic. Need to modify to allow users to buy multiple tickers
-    // for much cheaper. Also, numbers are chosen at random, and no two users are allowed to have the same numbers.
-    // Consider adding support to let users choose their numbers.
-    function stake() external onlyDuringStakingPeriod payable {
-        require(msg.value == 2 ether, "Must stake 2 Ether");
-        require(userStakes[msg.sender] == 0, "You can only stake once");
+    function stake() external onlyDuringStakingPeriod {
+        require(!hasStakedThisRound[msg.sender], "You can only stake once");
 
         if (userStakes[msg.sender] == 0) {
             winners.push(address(0)); // Initialize the winner placeholder
@@ -61,10 +58,12 @@ contract PowerballLottery {
             (chosenNumbers, chosenSpecialNumber) = generateRandomNumbers(block.timestamp);
         } while (numbersAlreadyTaken(chosenNumbers, chosenSpecialNumber));
 
-        uint256 amount = msg.value;
+        uint256 amount = 2; // 2 GHO tokens 
         userStakes[msg.sender] += amount;
         totalStaked += amount;
         hasStakedThisRound[msg.sender] = true;
+
+        require(ghoToken.transferFrom(msg.sender, address(this), amount), "GHO token transfer failed");
 
         tickets[msg.sender] = LotteryTicket(chosenNumbers, chosenSpecialNumber, false);
 
