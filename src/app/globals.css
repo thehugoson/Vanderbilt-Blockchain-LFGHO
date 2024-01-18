@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+.lottery-home {
+  background-color: #1a3319;
+  color: #a07b58;
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center; 
+
+}
+
+.lottery-page {
+  background-color: #1a3319;
+  color: #a07b58;
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center; 
+
+}
+
+.lottery-home h1 {
+  font-size: 4em;
+  font-weight: bold;
+
+}
+
+.connect-button{
+  margin-top: 10px;
+  padding: 10px 15px;
+  cursor: pointer;
+  background-color: #452304;
+  color: #a07b58;
+  border: none;
+  border-radius: 10px;
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.connect-button:hover {
+  background-color: #1b0f04;
+}
+
+.action-button {
+  margin-top: 10px;
+  padding: 10px 15px;
+  cursor: pointer;
+  background-color: #452304;
+  color: #a07b58;
+  border: none;
+  border-radius: 5px;
+}
+
+.action-button:hover {
+  background-color: #1b0f04; 
+}
+
+.number-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+
+.lottery-game {
+  flex: 1;
+}
+
+.wallet-info {
+  margin-top: 20px;
+}
+
+.loading {
+  font-size: 18px;
+  color: #ccc;
+}

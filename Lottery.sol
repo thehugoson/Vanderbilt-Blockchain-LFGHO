@@ -1,23 +1,31 @@
+// Check comments above functions. Some might need to be modified for robsutness/optimal functioanlity. 
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract Lottery {
+contract PowerballLottery {
     address public owner;
     uint256 public totalStaked;
-    address public winner;
-    uint256 public startTime;
-    uint256 constant public oneMinute = 1 minutes;
+    uint256 public currentWeek;
+    uint256 public drawTime;
+    uint256 constant public oneWeek = 1 weeks;
 
     mapping(address => uint256) public userStakes;
-    address[] public participants;
+    mapping(address => LotteryTicket) public tickets;
+    mapping(address => bool) public hasStakedThisRound;
+    address[] public winners;
+
+    struct LotteryTicket {
+        uint8[5] numbers;
+        uint8 specialNumber;
+        bool claimed;
+    }
 
     event Staked(address indexed user, uint256 amount);
-    event LotteryDrawn(address indexed winner, uint256 prize);
-
-    constructor() {
-        owner = msg.sender;
-        startTime = block.timestamp;
-    }
+    event LotteryDrawn(address indexed winner, uint256 prize, uint8[5] numbers, uint8 specialNumber);
+    event NumbersDrawn(uint8[5] numbers, uint8 specialNumber);
+    event MyNumbers(address indexed user, uint8[5] numbers, uint8 specialNumber);
+    event WinningsClaimed(address indexed winner, uint256 prize);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only the owner can call this function");
@@ -25,45 +33,188 @@ contract Lottery {
     }
 
     modifier onlyDuringStakingPeriod() {
-        require(block.timestamp < startTime + oneMinute, "Staking period has ended");
+        require(block.timestamp < drawTime, "Staking period for the current week has ended");
         _;
     }
 
-    function stake() external onlyDuringStakingPeriod payable {
-        uint256 amount = msg.value;
-        require(amount > 0, "Amount of Ether must be greater than 0");
-
-        if (userStakes[msg.sender] == 0) {
-            participants.push(msg.sender);
-        }
-
-        userStakes[msg.sender] += amount;
-        totalStaked += amount;
-
-        emit Staked(msg.sender, amount);
+    constructor() {
+        owner = msg.sender;
+        drawTime = block.timestamp + oneWeek;
     }
 
-    function drawLottery() external onlyOwner payable {
-        require(totalStaked > 0, "No funds in the lottery pool");
-        require(block.timestamp >= startTime + oneMinute, "Staking period has not ended yet");
+    // Current functionality requires users to stake 2 ETH. Only allowed to have one entry per week.
+    // The ammount and both frequency, are unrealistic. Need to modify to allow users to buy multiple tickers
+    // for much cheaper. Also, numbers are chosen at random, and no two users are allowed to have the same numbers.
+    // Consider adding support to let users choose their numbers.
+    function stake() external onlyDuringStakingPeriod payable {
+        require(msg.value == 2 ether, "Must stake 2 Ether");
+        require(userStakes[msg.sender] == 0, "You can only stake once");
 
-        uint256 highestStake = 0;
+        if (userStakes[msg.sender] == 0) {
+            winners.push(address(0)); // Initialize the winner placeholder
+        }
 
-        for (uint256 i = 0; i < participants.length; i++) {
-            address user = participants[i];
-            if (userStakes[user] > highestStake) {
-                highestStake = userStakes[user];
-                winner = user;
+        uint8[5] memory chosenNumbers;
+        uint8 chosenSpecialNumber;
+
+        do {
+            (chosenNumbers, chosenSpecialNumber) = generateRandomNumbers(block.timestamp);
+        } while (numbersAlreadyTaken(chosenNumbers, chosenSpecialNumber));
+
+        uint256 amount = msg.value;
+        userStakes[msg.sender] += amount;
+        totalStaked += amount;
+        hasStakedThisRound[msg.sender] = true;
+
+        tickets[msg.sender] = LotteryTicket(chosenNumbers, chosenSpecialNumber, false);
+
+        emit Staked(msg.sender, amount);
+        emit MyNumbers(msg.sender, chosenNumbers, chosenSpecialNumber);
+    }
+
+    function numbersAlreadyTaken(uint8[5] memory chosenNumbers, uint8 chosenSpecialNumber) internal view returns (bool) {
+        for (uint256 i = 0; i < winners.length; i++) {
+            LotteryTicket memory existingTicket = tickets[winners[i]];
+
+            if (checkTicket(chosenNumbers, chosenSpecialNumber, existingTicket)) {
+                return true; // Numbers already taken, generate new ones
             }
         }
 
-        uint256 prize = totalStaked;
-        payable(winner).transfer(prize);
+        return false; // Numbers are unique
+    }
 
+    function getStakedUsers() internal view returns (address[] memory) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < winners.length; i++) {
+            if (userStakes[winners[i]] > 0) {
+                count++;
+            }
+        }
+
+        address[] memory stakedUsers = new address[](count);
+        count = 0;
+        for (uint256 i = 0; i < winners.length; i++) {
+            if (userStakes[winners[i]] > 0) {
+                stakedUsers[count] = winners[i];
+                count++;
+            }
+        }
+
+        return stakedUsers;
+    }
+
+    function drawLottery() external onlyOwner {
+        require(block.timestamp >= drawTime, "Drawing time for the current week has not arrived yet");
+
+        uint8[5] memory drawnNumbers;
+        uint8 drawnSpecialNumber;
+        (drawnNumbers, drawnSpecialNumber) = generateRandomNumbers(block.timestamp);
+
+        emit NumbersDrawn(drawnNumbers, drawnSpecialNumber);
+
+        // Check for winners
+        for (uint256 i = 0; i < winners.length; i++) {
+            address winner = winners[i];
+            LotteryTicket memory ticket = tickets[winner];
+
+            if (checkTicket(drawnNumbers, drawnSpecialNumber, ticket)) {
+                uint256 prize = calculatePrize();
+                emit LotteryDrawn(winner, prize, drawnNumbers, drawnSpecialNumber);
+            }
+        }
+
+        // Reset for the next week
+        currentWeek++;
+        drawTime = block.timestamp + oneWeek;
+
+        // Reset users that have staked
+        address[] memory stakedUsers = getStakedUsers();
+        for (uint256 i = 0; i < stakedUsers.length; i++) {
+            delete tickets[stakedUsers[i]];
+            hasStakedThisRound[stakedUsers[i]] = false;
+        }
+    }
+
+
+    function claimWinnings() external {
+        require(winners.length > 0, "No winners in the current round");
+
+        bool isWinner = false;
+        for (uint256 i = 0; i < winners.length; i++) {
+            if (winners[i] == msg.sender) {
+                isWinner = true;
+                break;
+            }
+        }
+
+        require(isWinner, "You are not a winner or have already claimed winnings");
+
+        uint256 prize = calculatePrize();
+        require(prize > 0, "No winnings available");
+
+        payable(msg.sender).transfer(prize);
+        emit WinningsClaimed(msg.sender, prize);
+
+        // Remove the winner from the list
+        for (uint256 i = 0; i < winners.length; i++) {
+            if (winners[i] == msg.sender) {
+                delete winners[i];
+                break;
+            }
+        }
+
+        // Reset total staked amount
         totalStaked = 0;
-        delete winner;
-        delete participants;
+    }
 
-        emit LotteryDrawn(winner, prize);
+    function getMyNumbers() external view returns (uint8[5] memory, uint8) {
+        require(userStakes[msg.sender] > 0, "No staking found for the user");
+        LotteryTicket memory ticket = tickets[msg.sender];
+        return (ticket.numbers, ticket.specialNumber);
+    }
+
+    function checkTicket(uint8[5] memory drawnNumbers, uint8 drawnSpecialNumber, LotteryTicket memory ticket) internal pure returns (bool) {
+        bool numbersMatch = true;
+        for (uint8 i = 0; i < 5; i++) {
+            if (ticket.numbers[i] != drawnNumbers[i]) {
+                numbersMatch = false;
+                break;
+            }
+        }
+        return numbersMatch && (ticket.specialNumber == drawnSpecialNumber);
+    }
+
+    // Currently, we are sending the entire pot to all users. Need to account for cases with partial winnings
+    // (if that's something we want to include) or if multiple users have same numbers that win.
+    function calculatePrize() internal view returns (uint256) {
+        return totalStaked;
+    }
+
+    function generateRandomNumbers(uint256 seed) internal view returns (uint8[5] memory, uint8) {
+        uint8[5] memory drawnNumbers;
+        uint8 drawnSpecialNumber;
+
+        bytes32 blockHash = blockhash(block.number - 1);
+        seed ^= uint256(blockHash);
+
+        for (uint8 i = 0; i < 5; i++) {
+            drawnNumbers[i] = uint8(uint256(keccak256(abi.encodePacked(seed, i))) % 69 + 1);
+        }
+
+        drawnSpecialNumber = uint8(uint256(keccak256(abi.encodePacked(seed, uint8(5)))) % 26 + 1);
+
+        return (drawnNumbers, drawnSpecialNumber);
+    }
+
+    // The following functions are for dev purposes only. Would not include in actual implementation
+    function endLotteryManually() external onlyOwner {
+        drawTime = block.timestamp;  
+    } 
+
+    function makeWinner(address user) external onlyOwner {
+        require(userStakes[user] > 0, "User has no stakes");
+
+        winners.push(user);
     }
 }
