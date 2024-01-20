@@ -1,52 +1,34 @@
-'use client'
-import React, { useState, useEffect } from 'react';
+'use client';
+
 import { useModal } from 'connectkit';
 import { useAccount, useDisconnect } from 'wagmi';
+import { ethers } from 'ethers';
+import contractABI from './abi.json';
+
+const contractAddress = "0x670aa2cfea6fba456bc0e5cd288bdec8cd0acbf4";
+
+const loadData = async () => {
+  try {
+    const provider = new ethers.JsonRpcProvider('https://eth-goerli.g.alchemy.com/v2/Hi0PXrzRbpOJUDt00u5M5402QyDKrqcz');
+    const contract = new ethers.Contract(contractAddress, contractABI, provider);
+    const greeting = await contract.print();
+    alert(greeting);
+  } catch (error) {
+    console.error("Error loading data from the contract:", error);
+    alert("Failed to load data from the contract.");
+  }
+};
 
 export default function Home() {
-  const { isConnected, address, isConnecting } = useAccount();
+  const { isConnected, address } = useAccount();
   const { setOpen } = useModal();
   const { disconnect } = useDisconnect();
-  const [countdown, setCountdown] = useState(300); // set later from backend
-  const [timer, setTimer] = useState<NodeJS.Timer | null>(null);
   var potSize: number = 0;
 
-  useEffect(() => {
-    if (countdown > 0) {
-      const newTimer = setInterval(() => {
-        setCountdown((prevCountdown) => prevCountdown - 1);
-      }, 1000);
-
-      setTimer(newTimer);
-    }
-
-    return () => {
-      if (timer) {
-        clearInterval(timer);
-      }
-    };
-  }, [countdown, timer]);
-
-  function formatTime(seconds: number) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-  }
-
-  if (isConnecting) return <div className="lottery-home">
-      <div className="lottery-home">
-          <h1>Connect to your wallet to participate!</h1>
-          <h1>Current pot size: ${potSize}</h1>
-          <button className="connect-button" onClick={() => setOpen(true)}>
-            Connect Wallet
-          </button>
-        </div>
-     </div>;
-
   return (
-    <div>
+    <div className="lottery-home">
       {!isConnected && (
-        <div className="lottery-home">
+        <div>
           <h1>Connect to your wallet to participate!</h1>
           <h1>Current pot size: ${potSize}</h1>
           <button className="connect-button" onClick={() => setOpen(true)}>
@@ -56,7 +38,7 @@ export default function Home() {
       )}
 
       {isConnected && (
-          <div className="lottery-page">
+          <div>
             <h1>🎱 Lottery Game 🎱</h1>
             <p>Choose your lucky numbers:</p>
             <div className="number-buttons">
@@ -65,10 +47,11 @@ export default function Home() {
               ))}
             </div>
             <button className="action-button">Submit Numbers</button>
+            <button className="action-button">Stake</button>
             <div>
               <h2>Your Selected Numbers:</h2>
             </div>
-            <button className="action-button">Draw Lottery Numbers</button>
+            <button className="action-button" onClick={loadData}>Draw Lottery Numbers</button>
             <div>
               <h2>Results:</h2>
             </div>
@@ -78,9 +61,6 @@ export default function Home() {
               <button className="action-button" onClick={() => disconnect()}>
                 Disconnect
               </button>
-            </div>
-            <div>
-              <h3>Countdown: {formatTime(countdown)}</h3>
             </div>
           </div>
       )}
