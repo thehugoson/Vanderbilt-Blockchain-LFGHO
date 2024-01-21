@@ -1,18 +1,25 @@
 'use client';
-
+import React, { useState } from 'react';
 import { useModal } from 'connectkit';
 import { useAccount, useDisconnect } from 'wagmi';
 import { ethers } from 'ethers';
 import contractABI from './abi.json';
 
 const contractAddress = "0x670aa2cfea6fba456bc0e5cd288bdec8cd0acbf4";
-
-const loadData = async () => {
+const provider = new ethers.JsonRpcProvider('https://eth-goerli.g.alchemy.com/v2/Hi0PXrzRbpOJUDt00u5M5402QyDKrqcz');
+const contract = new ethers.Contract(contractAddress, contractABI, provider);
+const submitNumbers = async () => {
   try {
-    const provider = new ethers.JsonRpcProvider('https://eth-goerli.g.alchemy.com/v2/Hi0PXrzRbpOJUDt00u5M5402QyDKrqcz');
-    const contract = new ethers.Contract(contractAddress, contractABI, provider);
-    const greeting = await contract.print();
-    alert(greeting);
+    await contract.stake();
+  } catch (error) {
+    console.error("Error loading data from the contract:", error);
+    alert("Failed to load data from the contract.");
+  }
+};
+
+const winnings = async () => {
+  try {
+    await contract.claimWinnings();
   } catch (error) {
     console.error("Error loading data from the contract:", error);
     alert("Failed to load data from the contract.");
@@ -46,15 +53,12 @@ export default function Home() {
                 <button key={index + 1}>{index + 1}</button>
               ))}
             </div>
-            <button className="action-button">Submit Numbers</button>
-            <button className="action-button">Stake</button>
+            <button className="action-button" onClick={submitNumbers} >Submit Numbers</button>
             <div>
               <h2>Your Selected Numbers:</h2>
             </div>
-            <button className="action-button" onClick={loadData}>Draw Lottery Numbers</button>
-            <div>
-              <h2>Results:</h2>
-            </div>
+            <button className="action-button" onClick={winnings}>Get Rewards</button>
+
 
             <div className="wallet-info">
               <p>Connected Wallet: {address}</p>
